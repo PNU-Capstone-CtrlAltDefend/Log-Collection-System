@@ -11,10 +11,66 @@ UIDN="$(id -u)"
 GIDN="$(id -g)"
 
 CLEANUP_LEGACY="${CLEANUP_LEGACY:-1}"
+REPAIR_DOCKER_APT="${REPAIR_DOCKER_APT:-0}"
+
+sanitize_docker_apt() {
+  info "APT 소스 정리: download.docker.com 항목 임시 비활성화"
+  local bdir="/etc/apt/sources.list.d/backup-$(date +%Y%m%d%H%M%S)"
+  sudo mkdir -p "$bdir"
+
+  # docker repo가 들어있는 모든 리스트 파일 수집
+  mapfile -t files < <(grep -RIl "download\.docker\.com" /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null || true)
+  if ((${#files[@]})); then
+    for f in "${files[@]}"; do
+      sudo mv -f "$f" "$bdir/" || true
+      echo "  - moved: $f -> $bdir/"
+    done
+    warn "임시 비활성화 완료(백업: $bdir)."
+  else
+    echo "  - docker APT 항목 없음 → 건너뜀"
+  fi
+
+  # ----- 자동 판단: docker-ce 사용/후보가 보이면 자동 복구 모드 전환 -----
+  if [[ "$REPAIR_DOCKER_APT" = "0" ]]; then
+    if dpkg -l 2>/dev/null | grep -qE '^ii\s+docker-ce\s' \
+       || apt-cache policy docker-ce 2>/dev/null | grep -q 'Candidate:' ; then
+      warn "docker-ce 환경 감지 → Docker APT 저장소 정상 재생성(REPAIR_DOCKER_APT=1 자동 적용)."
+      REPAIR_DOCKER_APT="1"
+    fi
+  fi
+
+  # ----- 필요 시 정상 형태로 재생성 -----
+  if [[ "$REPAIR_DOCKER_APT" = "1" ]]; then
+    info "Docker APT repo 정상 형태로 재생성"
+    sudo install -m 0755 -d /etc/apt/keyrings
+
+    # 키가 없으면 시도해서 만들기(없어도 동작은 계속)
+    if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
+      if command -v curl >/dev/null 2>&1 && command -v gpg >/dev/null 2>&1; then
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+          | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+      else
+        warn "curl/gpg 없음 → 키 생략(나중에 추가 권장)"
+      fi
+    fi
+
+    CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+    # 키가 있으면 signed-by 사용, 없으면 생략
+    sigopt=""
+    [[ -f /etc/apt/keyrings/docker.gpg ]] && sigopt=" signed-by=/etc/apt/keyrings/docker.gpg"
+    echo "deb [arch=$(dpkg --print-architecture)${sigopt}] https://download.docker.com/linux/ubuntu ${CODENAME} stable" \
+      | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    log "docker.list 재생성 완료"
+  fi
+}
+
+sanitize_docker_apt
+info "apt-get update 실행"
+sudo apt-get update -y
 
 info "패키지 설치 (auditd, audispd-plugins, udisks2, udiskie, gettext-base)"
-sudo apt-get update -y
-sudo apt-get install -y auditd audispd-plugins udisks2 udiskie gettext-base || true
+sudo apt-get install -y auditd audispd-plugins udisks2 udiskie gettext-base
 
 info "auditd enable & start"
 sudo systemctl enable auditd
@@ -55,8 +111,10 @@ log "udiskie 설정 완료"
 if [[ "${CLEANUP_LEGACY}" = "1" ]]; then
   info "과거 fstype/충돌 규칙 정리"
   if command -v docker >/dev/null 2>&1; then
-    docker ps --format '{{.Names}}' | grep -Ei 'auto[-_]?device[-_]?watch' >/dev/null && \
-    sudo docker stop $(docker ps --format '{{.Names}}' | grep -Ei 'auto[-_]?device[-_]?watch') || true
+    names="$(docker ps --format '{{.Names}}' 2>/dev/null | grep -Ei 'auto[-_]?device[-_]?watch' || true)"
+    if [[ -n "$names" ]]; then
+      sudo docker stop $names || true
+    fi
   fi
   sudo pkill -f auto_device_watch.sh 2>/dev/null || true
   sudo pkill -f 'auditctl .*fstype'   2>/dev/null || true
@@ -66,7 +124,7 @@ if [[ "${CLEANUP_LEGACY}" = "1" ]]; then
   sudo rm -f  /etc/audit/audit.rules.back.*     2>/dev/null || true
 
   sudo grep -RIlZ 'fstype=' /etc/audit 2>/dev/null \
-    | sudo xargs -0 -r sed -i -E -- '/-F[[:space:]]*fstype=/d'
+    | sudo xargs -0 -r sed -i -E -- '/-F[[:space:]]*fstype=/d' || true
 
   sudo auditctl -D || true
   log "잔재 정리 완료"
