@@ -75,7 +75,7 @@ for mp in /media/*/*; do
   [ -d "$mp" ] || continue
   echo "-a always,exit -F arch=b64 -S open,openat,openat2,creat -F dir=$mp -k usb_copy_watch" >> /etc/audit/rules.d/usb.rules
   echo "-a always,exit -F arch=b32 -S open,openat,          creat -F dir=$mp -k usb_copy_watch" >> /etc/audit/rules.d/usb.rules
-  echo "-w $mp -p wa -k usb_copy_watch" >> /etc/audit/rules.usb.rules
+  echo "-w $mp -p wa -k usb_copy_watch" >> /etc/audit/rules.d/usb.rules
 done
 
 auditctl -e 1 || true
