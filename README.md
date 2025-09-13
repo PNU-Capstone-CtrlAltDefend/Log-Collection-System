@@ -21,17 +21,19 @@ $ sudo apt install -y udisks2 udiskie
 
 # 사용자 서비스로 udiskie 띄우기
 $ mkdir -p ~/.config/systemd/user
-$ cat >~/.config/systemd/user/udiskie.service <<'EOF'
+$ cat >~/.config/systemd/user/udiskie.service <<'UNIT'
 [Unit]
 Description=Auto-mount USB drives via udiskie
+After=udisks2.service
 
 [Service]
-ExecStart=/usr/bin/udiskie -2 -a -s
+ExecStart=/usr/bin/udiskie --config %h/.config/udiskie/config.yml --automount --no-notify --no-tray
 Restart=on-failure
+RestartSec=2s
 
 [Install]
 WantedBy=default.target
-EOF
+UNIT
 
 # 마운트 옵션 (파일 소유권/권한 안정화)
 $ UIDN=$(id -u); GIDN=$(id -g)
