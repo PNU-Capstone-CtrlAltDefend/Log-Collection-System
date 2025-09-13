@@ -36,7 +36,7 @@ EOF
 # 마운트 옵션 (파일 소유권/권한 안정화)
 $ UIDN=$(id -u); GIDN=$(id -g)
 $ mkdir -p ~/.config/udiskie
-$ cat >~/.config/udiskie/config.yml <<'EOF'
+$ cat >~/.config/udiskie/config.yml <<EOF
 mount_options:
   vfat:  [rw,uid=${UIDN},gid=${GIDN},umask=022,flush]
   exfat: [rw,uid=${UIDN},gid=${GIDN},umask=022]
