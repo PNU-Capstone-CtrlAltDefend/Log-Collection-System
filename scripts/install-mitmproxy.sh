@@ -1,17 +1,4 @@
-docker cp log-collect-proxy-agent:/app/email_script.py ./email_script.py
-docker cp log-collect-proxy-agent:/app/http_script.py  ./http_script.py
-docker cp log-collect-proxy-agent:/app/requirements.txt ./requirements.txt
-
-docker compose stop proxy-agent || docker stop log-collect-proxy-agent
-docker compose rm -f proxy-agent || true
-pkill -f 'mitmproxy|mitmdump' 2>/dev/null || true
-sudo ss -ltnp | grep ':8081' || echo "8081 free"
-
-sudo rm -f /usr/local/share/ca-certificates/mitmproxy.crt
-sudo update-ca-certificates
-rm -rf ~/Log-Collection-System/mitmproxy 2>/dev/null || true
-rm -rf ~/.mitmproxy 2>/dev/null || true
-
+# 4) 로컬 mitmproxy 설치(또는 재설치)
 command -v mitmdump && mitmdump —version || true
 sudo apt purge -y mitmproxy || true
 sudo apt autoremove -y
