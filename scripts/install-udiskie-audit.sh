@@ -7,6 +7,7 @@ set -euo pipefail
 
 ### 0) 대상 사용자 식별 (sudo로 실행 시 SUDO_USER 우선)
 TARGET_USER="${SUDO_USER:-$USER}"
+GROUP_NAME="$(id -gn "$TARGET_USER")"
 HOME_DIR="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
 if [[ -z "${HOME_DIR}" || ! -d "${HOME_DIR}" ]]; then
   echo "대상 사용자 홈 디렉토리를 찾지 못했습니다: ${TARGET_USER}" >&2
@@ -39,8 +40,7 @@ Restart=on-failure
 [Install]
 WantedBy=default.target
 EOF
-chown -R "${TARGET_USER}:${TARGET_USER}" "${HOME_DIR}/.config"
-
+chown -R "${TARGET_USER}:${GROUP_NAME}" "${HOME_DIR}/.config"
 ### 3) udiskie 마운트 옵션 구성 (UID/GID 반영)
 echo "[*] udiskie config.yml 생성"
 UDISKIE_CFG_DIR="${HOME_DIR}/.config/udiskie"
@@ -56,7 +56,7 @@ mount_options:
 device_config:
   default_options: { automount: true }
 EOF
-chown -R "${TARGET_USER}:${TARGET_USER}" "${UDISKIE_CFG_DIR}"
+chown -R "${TARGET_USER}:${GROUP_NAME}" "${UDISKIE_CFG_DIR}"
 
 ### 4) 사용자 systemd 데몬 리로드 & 서비스 활성화
 echo "[*] systemd --user 데몬 리로드 및 서비스 활성화"
