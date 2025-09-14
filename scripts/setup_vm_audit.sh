@@ -147,10 +147,10 @@ OUT="$RULES_D/usb.rules"
 mkdir -p "$RULES_D"
 
 cat > "$TMP" <<'EOF'
--a always,exit -F arch=b64 -S mount   -F success=1 -F auid>=1000 -F auid!=4294967295 -k usb_mount
--a always,exit -F arch=b32 -S mount   -F success=1 -F auid>=1000 -F auid!=4294967295 -k usb_mount
--a always,exit -F arch=b64 -S umount2 -F success=1 -F auid>=1000 -F auid!=4294967295 -k usb_umount
--a always,exit -F arch=b32 -S umount2 -F success=1 -F auid>=1000 -F auid!=4294967295 -k usb_umount
+-a always,exit -F arch=b64 -S mount   -F success=1 -k usb_mount
+-a always,exit -F arch=b32 -S mount   -F success=1 -k usb_mount
+-a always,exit -F arch=b64 -S umount2 -F success=1 -k usb_umount
+-a always,exit -F arch=b32 -S umount2 -F success=1 -k usb_umount
 EOF
 
 shopt -s nullglob
