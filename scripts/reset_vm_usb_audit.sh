@@ -12,7 +12,7 @@ run(){ if [ "$DRY" = "1" ]; then echo "[DRY] $*"; else eval "$@"; fi }
 
 info "1) systemd 유닛 비활성화 및 삭제"
 run 'sudo systemctl disable --now audit-usb-refresh.path 2>/dev/null || true'
-run 'sudo systemctl disable --now audit-usb-refresh.service 2:/dev/null || true'
+run 'sudo systemctl disable --now audit-usb-refresh.service 2>/dev/null || true'
 run 'sudo rm -f /etc/systemd/system/audit-usb-refresh.path /etc/systemd/system/audit-usb-refresh.service'
 run 'sudo systemctl daemon-reload'
 
@@ -20,7 +20,7 @@ info "2) audit 규칙/백업/잔재 제거"
 run 'sudo rm -f /etc/audit/rules.d/usb.rules /etc/audit/rules.usb.rules'
 run 'sudo rm -rf /etc/audit/rules.d.bak.*'
 run 'sudo rm -f /etc/audit/audit.rules.back.*'
-run "sudo grep -RIlZ 'fstype=' /etc/audit 2>/dev/null | sudo xargs -0 -r sed -i -E -- '/-F[[:space:]]*fstype=/d'"
+run "sudo grep -RIlZ 'fstype=' /etc/audit 2>/dev/null | sudo xargs -0 -r sed -i -E -- '/-F[[:space:]]*fstype=/d' || true"
 
 info "3) 실시간 규칙 초기화"
 run 'sudo auditctl -D || true'
