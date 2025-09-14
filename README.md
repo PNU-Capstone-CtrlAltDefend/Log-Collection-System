@@ -27,6 +27,7 @@ Description=Auto-mount USB drives via udiskie
 After=udisks2.service
 
 [Service]
+Environment=XDG_CONFIG_DIRS=/dev/null
 ExecStart=/usr/bin/udiskie --config %h/.config/udiskie/config.yml --automount --no-notify --no-tray
 Restart=on-failure
 RestartSec=2s
@@ -39,15 +40,25 @@ UNIT
 $ UIDN=$(id -u); GIDN=$(id -g)
 $ mkdir -p ~/.config/udiskie
 $ cat >~/.config/udiskie/config.yml <<EOF
-mount_options:
-  vfat:  [rw,uid=${UIDN},gid=${GIDN},umask=022,flush]
-  exfat: [rw,uid=${UIDN},gid=${GIDN},umask=022]
-  ntfs:  [rw,uid=${UIDN},gid=${GIDN},umask=022,big_writes]
-  ext2:  [rw]
-  ext3:  [rw]
-  ext4:  [rw]
+program_options:
+  automount: true
+  notify: false
+  tray: false
+
 device_config:
-  default_options: { automount: true }
+  - automount: true
+  - id_type: vfat
+    options: ["rw","uid=${UIDN}","gid=${GIDN}","umask=022","flush"]
+  - id_type: exfat
+    options: ["rw","uid=${UIDN}","gid=${GIDN}","umask=022"]
+  - id_type: ntfs
+    options: ["rw","uid=${UIDN}","gid=${GIDN}","umask=022","big_writes"]
+  - id_type: ext2
+    options: ["rw"]
+  - id_type: ext3
+    options: ["rw"]
+  - id_type: ext4
+    options: ["rw"]
 EOF
 
 $ systemctl --user daemon-reload
